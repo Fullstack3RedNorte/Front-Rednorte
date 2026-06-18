@@ -10,4 +10,14 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    proxy: {
+      // Intercepta todas las peticiones que vayan a /api y las envía al BFF
+      '/api': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''), // Remueve '/api' antes de enviarlo al backend
+      },
+    },
+  },
 })

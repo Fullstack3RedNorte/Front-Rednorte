@@ -1,35 +1,61 @@
 import bffClient from '../api/bffClient';
-import type { PageResponse, SolicitudDetalleResponse, CrearSolicitudPayload } from '../types/redNorte';
+import type { 
+  EspecialidadResponse, 
+  SolicitudResponse, 
+  SolicitudDetalleResponse, 
+  PageResponse, 
+  CrearSolicitudRequest, 
+  CambiarEstadoRequest 
+} from '../types/redNorte';
 
 export const redNorteService = {
   
-  // PORTAL PACIENTES: Obtener solicitudes resumidas usando solo el RUT (Sin autenticación)
-  obtenerSolicitudesPaciente: async (rutPaciente: string, page = 0, size = 20): Promise<PageResponse<SolicitudDetalleResponse>> => {
-    try {
-      // Ajusta este prefijo según la ruta exacta que exponga tu BFF Gateway
-      const response = await bffClient.get<PageResponse<SolicitudDetalleResponse>>(
-        `/portal/solicitudes`, {
-          params: { rutPaciente, page, size }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error consultando solicitudes del paciente:", error);
-      throw error;
-    }
-  },
-
-  // PORTAL PACIENTES: Obtener el detalle específico con historial clínico
-  obtenerDetalleSolicitudPaciente: async (id: number, rutPaciente: string): Promise<SolicitudDetalleResponse> => {
-    const response = await bffClient.get<SolicitudDetalleResponse>(`/portal/solicitudes/${id}`, {
-      params: { rutPaciente }
-    });
+  // GET /bff/lista-espera/especialidades
+  listarEspecialidadesActivas: async (): Promise<EspecialidadResponse[]> => {
+    // AGREGADO EL PREFIJO CORRECTO DEL BFF
+    const response = await bffClient.get<EspecialidadResponse[]>('/bff/lista-espera/especialidades');
     return response.data;
   },
 
-  // GESTIÓN INTERNA (Opcional): Si este front también lo usarán funcionarios autenticados para ingresar solicitudes
-  crearSolicitudListaEspera: async (payload: CrearSolicitudPayload): Promise<SolicitudDetalleResponse> => {
-    const response = await bffClient.post<SolicitudDetalleResponse>('/solicitudes', payload);
+  // POST /bff/lista-espera/solicitudes
+  crearSolicitud: async (payload: CrearSolicitudRequest): Promise<SolicitudResponse> => {
+    const response = await bffClient.post<SolicitudResponse>('/bff/lista-espera/solicitudes', payload);
+    return response.data;
+  },
+
+  // GET /bff/lista-espera/solicitudes
+  listarSolicitudes: async (filtros: {
+    especialidadId?: number;
+    estado?: string;
+    rutPaciente?: string;
+    page?: number;
+    size?: number;
+    ordenarPor?: string;
+  } = {}): Promise<PageResponse<SolicitudResponse>> => {
+    
+    const params = {
+      especialidadId: filtros.especialidadId,
+      estado: filtros.estado,
+      rutPaciente: filtros.rutPaciente,
+      page: filtros.page ?? 0,
+      size: filtros.size ?? 20,
+      ordenarPor: filtros.ordenarPor ?? 'prioridad'
+    };
+
+    // AGREGADO EL PREFIJO CORRECTO DEL BFF
+    const response = await bffClient.get<PageResponse<SolicitudResponse>>('/bff/lista-espera/solicitudes', { params });
+    return response.data;
+  },
+
+  // GET /bff/lista-espera/solicitudes/{id}
+  obtenerDetalleSolicitud: async (id: number): Promise<SolicitudDetalleResponse> => {
+    const response = await bffClient.get<SolicitudDetalleResponse>(`/bff/lista-espera/solicitudes/${id}`);
+    return response.data;
+  },
+
+  // PATCH /bff/lista-espera/solicitudes/{id}/estado
+  cambiarEstadoSolicitud: async (id: number, payload: CambiarEstadoRequest): Promise<SolicitudDetalleResponse> => {
+    const response = await bffClient.patch<SolicitudDetalleResponse>(`/bff/lista-espera/solicitudes/${id}/estado`, payload);
     return response.data;
   }
 };
